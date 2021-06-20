@@ -1,6 +1,8 @@
 # - developer gitignore
+# js-compiled backend build
 build
-
+# ssl cert (letsencrypt)
+src/static/.well-known/
 
 
 # - Node gitignore https://github.com/github/gitignore/blob/master/Node.gitignore
