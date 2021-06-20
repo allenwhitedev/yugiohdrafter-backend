@@ -1,7 +1,10 @@
 import express from 'express';
+
+const isProductionEnv = process.env.NODE_ENV === 'production' 
+
 // rest of the code remains same
 const app = express();
-const PORT = 8000;
+const PORT = isProductionEnv ? 80 : 8000;
 
 app.use(express.static(`${__dirname}/static`, { dotfiles: 'allow' }))
 
