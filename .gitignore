@@ -3,6 +3,7 @@
 build
 # ssl cert (letsencrypt)
 src/static/.well-known/
+src/static/build-frontend/
 
 
 # - Node gitignore https://github.com/github/gitignore/blob/master/Node.gitignore
