@@ -1,37 +1,51 @@
 import express from 'express'
-import fs from 'fs'
-import https from 'https'
-
+import moment from 'moment'
+import mongodb from 'mongodb'
+import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
+import { Room } from './models/Room'
+import { rooms } from './state/rooms'
+import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
 
-// - initialize express server, serve .well-known file for letencrypt cert verification
-const app = express()
-app.use(express.static(`${__dirname}/static`, { dotfiles: 'allow' }))
+const app = express() // initialize express server
+
+// - initialize mongo db client
+var MongoClient = mongodb.MongoClient
+
+MongoClient.connect('mongodb://localhost:27017/yugiohdrafter', function (err: any, client: { db: (arg0: string) => any }) {
+  if (err) throw err
+
+  var db = client.db('yugiohdrafter')
+
+  db.collection('mammals').find().toArray(function (err: any, result: any) {
+    if (err) throw err
+
+    console.log(result)
+  })
+})
+
 
 // - routes
-app.get('/', (req, res) => res.send('Express + TypeScript Server'))
+const baseApiUrl = '/api'
+app.get(`${baseApiUrl}/`, (req, res) => res.send('Express + TypeScript Server'))
+app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just successfully queried yugiohdrafter-backend'}))
+
+// -- rooms
+app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
+app.post(`${baseApiUrl}/room`, (req, res) => {
+  const roomId = unique4CharString(rooms.byId)
+  const roomNew: Room = {
+    id: roomId,
+    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
+  }
+  stateAddWithMutation(rooms, [roomNew])
+
+  return res.json(roomNew)
+})
 
 // - start application
-const PORT = isProductionEnv ? 443 : 8000
+const PORT = 8000
 const envString = isProductionEnv ? 'Production' : 'Development'
-const serverStartMessage = `⚡️[server]: ${envString} server is running at https://localhost:${PORT} and`
-+ `\nServing static assets from '${__dirname}/static'`
-if (isProductionEnv) 
-{
-  const letsencryptDomainPath = '/etc/letsencrypt/live/yugiohdrafter.com'
-  https
-  .createServer(
-    {
-      key: fs.readFileSync(`${letsencryptDomainPath}/privkey.pem`),
-      cert: fs.readFileSync(`${letsencryptDomainPath}/cert.pem`),
-      ca: fs.readFileSync(`${letsencryptDomainPath}/chain.pem`),
-    },
-    app
-  )
-  .listen(PORT, () => { console.log(serverStartMessage) })
-}
-else 
-{
-  app.listen(PORT, () => { console.log(serverStartMessage) })
-}
+const serverStartMessage = `⚡️[server]: ${envString} server is running at https://localhost:${PORT}`
 
+app.listen(PORT, () => { console.log(serverStartMessage) })
