@@ -32,6 +32,7 @@ app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just success
 
 // -- rooms
 app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
+app.get(`${baseApiUrl}/room/:id`, (req, res) => res.json(rooms.byId[req.params.id]))
 app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
   const roomNew: Room = {

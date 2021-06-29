@@ -13,6 +13,6 @@ export function unique4CharString(byId: {[id: string]: {}}) { // generate uuid a
   }
    
   // - more collisions than allowed RETRY_ID_COLLISIONS_NUM, log error and return null
-  console.error(`Error: 'unique4CharString' had more than ${RETRY_ID_COLLISIONS_NUM} collsions.`) 
-  throw new Error(`Error: 'unique4CharString' had more than ${RETRY_ID_COLLISIONS_NUM} collsions.`)
+  console.error(`Error: 'unique4CharString' had more than ${RETRY_ID_COLLISIONS_NUM} collisions.`) 
+  throw new Error(`Error: 'unique4CharString' had more than ${RETRY_ID_COLLISIONS_NUM} collisions.`)
 }
