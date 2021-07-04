@@ -76,7 +76,15 @@ app.post(`${baseApiUrl}/room/joinRoom:id`, (req, res) => {
   }
   stateAddWithMutation(roomPlayers, [player])
 
-  rooms.byId[req.params.id].roomPlayerIds.push(player.id)
+  const room = rooms.byId[req.params.id]
+  room.roomPlayerIds.push(player.id)
+
+  // return name of set or array of card ids that must be retrieved client side
+  const cardSets = new Set<string | string[]>()
+  room.boosterIdsDraft.forEach((boosterId) => {
+    cardSets.add(boosters.byId[boosterId].cardIds || boosters.byId[boosterId].cardSetName)
+  })
+  return cardSets
 })
 
 app.post(`${baseApiUrl}/room`, (req, res) => {
