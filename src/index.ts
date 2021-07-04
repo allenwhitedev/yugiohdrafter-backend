@@ -66,8 +66,6 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     stateAddWithMutation(boosters, [booster])
   })
 
-  
-
   return res.json(roomNew)
 })
 
