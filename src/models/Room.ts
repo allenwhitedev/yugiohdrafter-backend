@@ -4,5 +4,6 @@ export interface Room {
   expires: moment.Moment
   id: string,
   boosterIdsRound: string[],
-  boosterIdsDraft: string[]
+  boosterIdsDraft: string[],
+  roomPlayerIds: string[]
 }

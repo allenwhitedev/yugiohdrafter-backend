@@ -56,6 +56,39 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     stateAddWithMutation(boosters, [booster])
   })
 
+  const hostPlayer: RoomPlayer = {
+    id: req.ip + "-" + roomId,
+    name: req.body.player.name,
+    isHost: true,
+    isReady: false,
+  }
+  stateAddWithMutation(roomPlayers, [hostPlayer])
+
+  return res.json(roomNew)
+})
+
+app.post(`${baseApiUrl}/room/joinRoom:id`, (req, res) => {
+  const player: RoomPlayer = {
+    id: req.ip + "-" + req.params.id,
+    name: req.body.player.name,
+    isHost: false,
+    isReady: false,
+  }
+  stateAddWithMutation(roomPlayers, [player])
+
+  rooms.byId[req.params.id].roomPlayerIds.push(player.id)
+})
+
+app.post(`${baseApiUrl}/room`, (req, res) => {
+  const roomId = unique4CharString(rooms.byId)
+
+  // add landing page boosters (not the ones for a round)
+  const boostersNew: Booster[] = req.body.boostersDraft
+  boostersNew.forEach((booster) => {
+    stateAddWithMutation(boosters, [booster])
+  })
+
+  // add the host player
   const hostId = unique4CharString(rooms.byId)
   const hostPlayer: RoomPlayer = {
     id: hostId,
@@ -64,6 +97,16 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     isReady: false,
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
+
+  // create the room
+  const roomNew: Room = {
+    id: roomId,
+    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
+    boosterIdsRound: [],
+    boosterIdsDraft: boostersNew.map((booster) => booster.id),
+    roomPlayerIds: [hostId]
+  }
+  stateAddWithMutation(rooms, [roomNew])
 
   return res.json(roomNew)
 })
