@@ -1,3 +1,4 @@
+import cors from 'cors'
 import express from 'express'
 import moment from 'moment'
 import mongodb from 'mongodb'
@@ -8,6 +9,9 @@ import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
 
 const app = express() // initialize express server
+if (!isProductionEnv) // if in development environment allow cors from frontend dev origin 
+  app.use(cors({origin:'http://localhost:3000'}))
+
 
 // - initialize mongo db client
 var MongoClient = mongodb.MongoClient
