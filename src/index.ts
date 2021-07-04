@@ -43,8 +43,7 @@ app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
 app.get(`${baseApiUrl}/room/:id`, (req, res) => res.json(rooms.byId[req.params.id]))
 app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
-  const boostersNew: Booster[] = req.body.boostersDraft
-
+  
   const hostPlayer: RoomPlayer = {
     id: req.ip + "-" + roomId,
     name: req.body.player.name,
@@ -53,6 +52,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
 
+  const boostersNew: Booster[] = req.body.boostersDraft
   const roomNew: Room = {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
