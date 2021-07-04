@@ -44,17 +44,6 @@ app.get(`${baseApiUrl}/room/:id`, (req, res) => res.json(rooms.byId[req.params.i
 app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
   const boostersNew: Booster[] = req.body.boostersDraft
-  const roomNew: Room = {
-    id: roomId,
-    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
-    boosterIdsRound: [],
-    boosterIdsDraft: boostersNew.map((booster) => booster.id)
-  }
-  stateAddWithMutation(rooms, [roomNew])
-
-  boostersNew.forEach((booster) => {
-    stateAddWithMutation(boosters, [booster])
-  })
 
   const hostPlayer: RoomPlayer = {
     id: req.ip + "-" + roomId,
@@ -63,6 +52,21 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     isReady: false,
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
+
+  const roomNew: Room = {
+    id: roomId,
+    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
+    boosterIdsRound: [],
+    boosterIdsDraft: boostersNew.map((booster) => booster.id),
+    roomPlayerIds: [hostPlayer.id]
+  }
+  stateAddWithMutation(rooms, [roomNew])
+
+  boostersNew.forEach((booster) => {
+    stateAddWithMutation(boosters, [booster])
+  })
+
+  
 
   return res.json(roomNew)
 })
