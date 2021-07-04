@@ -3,7 +3,11 @@ import express from 'express'
 import moment from 'moment'
 import mongodb from 'mongodb'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
+import { Booster } from './models/Booster'
 import { Room } from './models/Room'
+import { RoomPlayer } from './models/RoomPlayer'
+import { boosters } from './state/boosters'
+import { roomPlayers } from './state/roomPlayers'
 import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
@@ -39,11 +43,27 @@ app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
 app.get(`${baseApiUrl}/room/:id`, (req, res) => res.json(rooms.byId[req.params.id]))
 app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
+  const boostersNew: Booster[] = req.body.boostersDraft
   const roomNew: Room = {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
+    boosterIdsRound: [],
+    boosterIdsDraft: boostersNew.map((booster) => booster.id)
   }
   stateAddWithMutation(rooms, [roomNew])
+
+  boostersNew.forEach((booster) => {
+    stateAddWithMutation(boosters, [booster])
+  })
+
+  const hostId = unique4CharString(rooms.byId)
+  const hostPlayer: RoomPlayer = {
+    id: hostId,
+    name: req.body.player.name,
+    isHost: req.body.player.isHost,
+    isReady: false,
+  }
+  stateAddWithMutation(roomPlayers, [hostPlayer])
 
   return res.json(roomNew)
 })

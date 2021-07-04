@@ -2,5 +2,7 @@ import moment from "moment";
 
 export interface Room {
   expires: moment.Moment
-  id: string    
+  id: string,
+  boosterIdsRound: string[],
+  boosterIdsDraft: string[]
 }
