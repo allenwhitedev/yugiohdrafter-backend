@@ -57,7 +57,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
     boosterIdsRound: [],
-    boosterIdsDraft: boostersNew.map((booster) => booster.id),
+    boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostPlayer.id]
   }
   stateAddWithMutation(rooms, [roomNew])
@@ -83,7 +83,7 @@ app.post(`${baseApiUrl}/room/joinRoom:id`, (req, res) => {
 
   // return name of set or array of card ids that must be retrieved client side
   const cardSets = new Set<string | string[]>()
-  room.boosterIdsDraft.forEach((boosterId) => {
+  room.boosterIdsLP.forEach((boosterId) => {
     cardSets.add(boosters.byId[boosterId].cardIds || boosters.byId[boosterId].cardSetName)
   })
   return cardSets
@@ -113,7 +113,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
     boosterIdsRound: [],
-    boosterIdsDraft: boostersNew.map((booster) => booster.id),
+    boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostId]
   }
   stateAddWithMutation(rooms, [roomNew])
