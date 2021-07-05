@@ -16,6 +16,8 @@ const app = express() // initialize express server
 if (!isProductionEnv) // if in development environment allow cors from frontend dev origin 
   app.use(cors({origin:'http://localhost:3000'}))
 
+app.use(express.json()); //Used to parse JSON bodies
+app.use(express.urlencoded()); //Parse URL-encoded bodies
 
 // - initialize mongo db client
 var MongoClient = mongodb.MongoClient
@@ -52,7 +54,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
 
-  const boostersNew: Booster[] = req.body.boostersDraft
+  const boostersNew: Booster[] = req.body.boostersLP
   const roomNew: Room = {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
