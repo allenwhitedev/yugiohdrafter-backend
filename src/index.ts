@@ -90,7 +90,7 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res) => {
   room.boosterIdsLP.forEach((boosterId) => {
     cardSets.add(boosters.byId[boosterId].cardIds || boosters.byId[boosterId].cardSetName)
   })
-  return cardSets
+  return res.json(rooms.byId[req.params.id])
 })
 
 app.post(`${baseApiUrl}/room`, (req, res) => {
