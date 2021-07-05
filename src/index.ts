@@ -47,10 +47,11 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
   
   const hostPlayer: RoomPlayer = {
-    id: req.ip + "-" + roomId,
+    id: req.body.player.ip + "-" + roomId,
     name: req.body.player.name,
     isHost: true,
     isReady: false,
+    ip: req.body.player.ip
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
 
@@ -71,12 +72,13 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   return res.json(roomNew)
 })
 
-app.post(`${baseApiUrl}/room/joinRoom:id`, (req, res) => {
+app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res) => {
   const player: RoomPlayer = {
-    id: req.ip + "-" + req.params.id,
+    id: req.body.player.ip + "-" + req.params.id,
     name: req.body.player.name,
     isHost: false,
     isReady: false,
+    ip: req.body.player.ip
   }
   stateAddWithMutation(roomPlayers, [player])
 
@@ -107,6 +109,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     name: req.body.player.name,
     isHost: req.body.player.isHost,
     isReady: false,
+    ip: req.body.player.ip,
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
 
