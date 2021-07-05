@@ -93,7 +93,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   const roomId = unique4CharString(rooms.byId)
 
   // add landing page boosters (not the ones for a round)
-  const boostersNew: Booster[] = req.body.boostersDraft
+  const boostersNew: Booster[] = req.body.boostersLP
   boostersNew.forEach((booster) => {
     stateAddWithMutation(boosters, [booster])
   })
