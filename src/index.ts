@@ -1,13 +1,15 @@
 import cors from 'cors'
-import express from 'express'
+import express, { Response } from 'express'
 import moment from 'moment'
 import mongodb from 'mongodb'
+import { RoomResult } from './contracts/RoomResult'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
 import { boosters } from './state/boosters'
 import { roomPlayers } from './state/roomPlayers'
+import { roomPlayersForRoom } from './state/roomPlayers/utils'
 import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
@@ -42,8 +44,16 @@ app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just success
 
 // -- rooms
 app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
-app.get(`${baseApiUrl}/room/:id`, (req, res) => res.json(rooms.byId[req.params.id]))
-app.post(`${baseApiUrl}/room`, (req, res) => {
+app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
+  const room = rooms.byId[req.params.id]
+  const roomPlayers = roomPlayersForRoom(room)
+  const result: RoomResult = {
+    room,
+    roomPlayers,
+  }
+  return res.json(result)
+})
+app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   const roomId = unique4CharString(rooms.byId)
   
   const hostPlayer: RoomPlayer = {
@@ -68,11 +78,17 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   boostersNew.forEach((booster) => {
     stateAddWithMutation(boosters, [booster])
   })
-
-  return res.json(roomNew)
+  const result: RoomResult = {
+    room: roomNew,
+    roomPlayers: {
+      allIds: roomNew.roomPlayerIds,
+      byId: { [hostPlayer.id]: hostPlayer }, 
+    }
+  }
+  res.json(result)
 })
 
-app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res) => {
+app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => {
   const player: RoomPlayer = {
     id: req.body.player.ip + "-" + req.params.id,
     name: req.body.player.name,
@@ -83,14 +99,26 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res) => {
   stateAddWithMutation(roomPlayers, [player])
 
   const room = rooms.byId[req.params.id]
-  room.roomPlayerIds.push(player.id)
+  // treat like a Set to enforce unique entries (JS Set is annoying to serialize)
+  if (!room.roomPlayerIds.includes(player.id)) 
+    room.roomPlayerIds.push(player.id)
 
   // return name of set or array of card ids that must be retrieved client side
   const cardSets = new Set<string | string[]>()
   room.boosterIdsLP.forEach((boosterId) => {
     cardSets.add(boosters.byId[boosterId].cardIds || boosters.byId[boosterId].cardSetName)
   })
-  return res.json(rooms.byId[req.params.id])
+  
+  // - return room players for room client is joining
+  const currRoomPlayersById: { [id: string]: RoomPlayer } = {}
+  room.roomPlayerIds.forEach(id => {
+   currRoomPlayersById[id] = roomPlayers.byId[id]
+  })
+  const result: RoomResult= {
+    room,
+    roomPlayers: roomPlayersForRoom(room),
+  }
+  return res.json(result)
 })
 
 app.post(`${baseApiUrl}/room`, (req, res) => {
@@ -120,7 +148,7 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
     boosterIdsRound: [],
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostId]
-  }
+ }
   stateAddWithMutation(rooms, [roomNew])
 
   return res.json(roomNew)
