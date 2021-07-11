@@ -53,6 +53,17 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
   }
   return res.json(result)
 })
+app.post(`${baseApiUrl}/room/changeName/:id`, (req, res: Response<RoomResult>) => {
+  const room = rooms.byId[req.params.id]
+  const roomPlayers = roomPlayersForRoom(room)
+  roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
+
+  const result: RoomResult = {
+    room,
+    roomPlayers,
+  }
+  return res.json(result)
+})
 app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   const roomId = unique4CharString(rooms.byId)
   
