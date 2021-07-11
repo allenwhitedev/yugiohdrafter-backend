@@ -53,10 +53,13 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
   }
   return res.json(result)
 })
-app.post(`${baseApiUrl}/room/changeName/:id`, (req, res: Response<RoomResult>) => {
+app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>) => {
   const room = rooms.byId[req.params.id]
   const roomPlayers = roomPlayersForRoom(room)
-  roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
+  if(req.body.player.name !== undefined) 
+    roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
+  if(req.body.player.isReady !== undefined)
+    roomPlayers.byId[req.body.player.ip + "-" + req.params.id].isReady = req.body.player.isReady
 
   const result: RoomResult = {
     room,
