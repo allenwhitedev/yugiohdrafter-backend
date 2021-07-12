@@ -91,7 +91,7 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
     boosterIdsRound: [],
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostPlayer.id],
-    customSetIds: customSetsNew.map((set) => set.set_name)
+    customSetIds: customSetsNew.map((set) => set.id)
   }
   stateAddWithMutation(rooms, [roomNew])
 
