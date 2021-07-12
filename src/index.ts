@@ -54,6 +54,7 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
   const result: RoomResult = {
     room,
     roomPlayers,
+    boostersDraft: boostersDraftForRoom(room)
   }
   return res.json(result)
 })
