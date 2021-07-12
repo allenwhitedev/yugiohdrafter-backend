@@ -4,4 +4,5 @@ export interface RoomPlayer{
     isReady: boolean;
     isHost: boolean;
     ip: string;
+    position?: number;
 }

@@ -9,11 +9,11 @@ import { CardSet } from './models/CardSet'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
 import { boosters } from './state/boosters/boosters'
-import { boostersLPForRoom } from './state/boosters/utils'
+import { boostersDraftForRoom, boostersLPForRoom } from './state/boosters/utils'
 import { customSets } from './state/customSets/customSets'
 import { customSetsForRoom } from './state/customSets/utils'
 import { roomPlayers } from './state/roomPlayers'
-import { roomPlayersForRoom } from './state/roomPlayers/utils'
+import { assignPlayersPositions, removeNotReadyPlayers, roomPlayersForRoom } from './state/roomPlayers/utils'
 import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
@@ -68,9 +68,11 @@ app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>)
   const result: RoomResult = {
     room,
     roomPlayers,
+    boostersDraft: boostersDraftForRoom(room)
   }
   return res.json(result)
 })
+
 app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   const roomId = unique4CharString(rooms.byId)
   
@@ -78,7 +80,7 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
     id: req.body.player.ip + "-" + roomId,
     name: req.body.player.name,
     isHost: true,
-    isReady: false,
+    isReady: true,
     ip: req.body.player.ip
   }
   stateAddWithMutation(roomPlayers, [hostPlayer])
@@ -88,7 +90,6 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   const roomNew: Room = {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
-    boosterIdsRound: [],
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostPlayer.id],
     customSetIds: customSetsNew.map((set) => set.id)
@@ -119,7 +120,7 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
     id: req.body.player.ip + "-" + req.params.id,
     name: req.body.player.name,
     isHost: false,
-    isReady: false,
+    isReady: true,
     ip: req.body.player.ip
   }
   stateAddWithMutation(roomPlayers, [player])
@@ -141,6 +142,30 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
     customSets: customSetsForRoom(room)
   }
   return res.json(result)
+})
+
+app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) => {
+  const roomId = req.params.id
+  const boostersNew: Booster[] = req.body.boostersDraft
+  const room = rooms.byId[roomId]
+
+  room.boosterIdsDraft = boostersNew.map((booster) => booster.id)
+
+  boostersNew.forEach((booster) => {
+    stateAddWithMutation(boosters, [booster])
+  })
+
+  removeNotReadyPlayers(room)
+  assignPlayersPositions(room)
+
+  const result: RoomResult = {
+    room,
+    roomPlayers: roomPlayersForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room),
+    boostersDraft: boostersDraftForRoom(room)
+  }
+  res.json(result)
 })
 
 // - start application

@@ -7,3 +7,10 @@ export function stateAddWithMutation<T extends StateItem>(state: State<T>, items
     state.byId[id] = item
   }
 }
+
+export function stateRemoveIdsWithMutation<T extends StateItem>(state: State<T>, ids: Array<string>) {
+  ids.forEach((id) => {
+    state.allIds = state.allIds.filter((i) => id !== i)
+    delete state.byId[id]
+  })
+}
