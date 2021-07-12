@@ -5,9 +5,13 @@ import mongodb from 'mongodb'
 import { RoomResult } from './contracts/RoomResult'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
+import { CardSet } from './models/CardSet'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
-import { boosters } from './state/boosters'
+import { boosters } from './state/boosters/boosters'
+import { boostersLPForRoom } from './state/boosters/utils'
+import { customSets } from './state/customSets/customSets'
+import { customSetsForRoom } from './state/customSets/utils'
 import { roomPlayers } from './state/roomPlayers'
 import { roomPlayersForRoom } from './state/roomPlayers/utils'
 import { rooms } from './state/rooms'
@@ -80,18 +84,26 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   stateAddWithMutation(roomPlayers, [hostPlayer])
 
   const boostersNew: Booster[] = req.body.boostersLP
+  const customSetsNew: CardSet[] = req.body.customSets
   const roomNew: Room = {
     id: roomId,
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
     boosterIdsRound: [],
     boosterIdsLP: boostersNew.map((booster) => booster.id),
-    roomPlayerIds: [hostPlayer.id]
+    roomPlayerIds: [hostPlayer.id],
+    customSetIds: customSetsNew.map((set) => set.set_name)
   }
   stateAddWithMutation(rooms, [roomNew])
 
   boostersNew.forEach((booster) => {
     stateAddWithMutation(boosters, [booster])
   })
+  customSetsNew.forEach((set) => {
+    stateAddWithMutation(customSets, [set])
+  })
+  
+  stateAddWithMutation(rooms, [roomNew])
+
   const result: RoomResult = {
     room: roomNew,
     roomPlayers: {
@@ -116,56 +128,19 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
   // treat like a Set to enforce unique entries (JS Set is annoying to serialize)
   if (!room.roomPlayerIds.includes(player.id)) 
     room.roomPlayerIds.push(player.id)
-
-  // return name of set or array of card ids that must be retrieved client side
-  const cardSets = new Set<string | string[]>()
-  room.boosterIdsLP.forEach((boosterId) => {
-    cardSets.add(boosters.byId[boosterId].cardIds || boosters.byId[boosterId].cardSetName)
-  })
   
   // - return room players for room client is joining
   const currRoomPlayersById: { [id: string]: RoomPlayer } = {}
   room.roomPlayerIds.forEach(id => {
    currRoomPlayersById[id] = roomPlayers.byId[id]
   })
-  const result: RoomResult= {
+  const result: RoomResult = {
     room,
     roomPlayers: roomPlayersForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room)
   }
   return res.json(result)
-})
-
-app.post(`${baseApiUrl}/room`, (req, res) => {
-  const roomId = unique4CharString(rooms.byId)
-
-  // add landing page boosters (not the ones for a round)
-  const boostersNew: Booster[] = req.body.boostersLP
-  boostersNew.forEach((booster) => {
-    stateAddWithMutation(boosters, [booster])
-  })
-
-  // add the host player
-  const hostId = unique4CharString(rooms.byId)
-  const hostPlayer: RoomPlayer = {
-    id: hostId,
-    name: req.body.player.name,
-    isHost: req.body.player.isHost,
-    isReady: false,
-    ip: req.body.player.ip,
-  }
-  stateAddWithMutation(roomPlayers, [hostPlayer])
-
-  // create the room
-  const roomNew: Room = {
-    id: roomId,
-    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
-    boosterIdsRound: [],
-    boosterIdsLP: boostersNew.map((booster) => booster.id),
-    roomPlayerIds: [hostId]
- }
-  stateAddWithMutation(rooms, [roomNew])
-
-  return res.json(roomNew)
 })
 
 // - start application

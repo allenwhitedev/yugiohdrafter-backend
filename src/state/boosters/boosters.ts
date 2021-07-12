@@ -1,4 +1,4 @@
-import { Booster } from "../models/Booster";
+import { Booster } from "../../models/Booster";
 
 export interface BoostersState {
   allIds: string[]
