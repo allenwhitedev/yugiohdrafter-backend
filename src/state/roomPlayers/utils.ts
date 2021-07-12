@@ -46,3 +46,10 @@ export function assignPlayersPositions(room: Room) {
       roomPlayers.byId[id].position = idx
   })
 }
+
+export function updatePlayerPositions(room: Room) {
+  room.roomPlayerIds.forEach((id) => {
+    const player = roomPlayers.byId[id]
+    const playerPosition = player.position === room.numPlayers - 1 ? 0 : player.position! + 1
+  })
+}

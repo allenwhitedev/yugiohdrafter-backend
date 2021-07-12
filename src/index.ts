@@ -9,11 +9,11 @@ import { CardSet } from './models/CardSet'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
 import { boosters } from './state/boosters/boosters'
-import { boostersDraftForRoom, boostersLPForRoom } from './state/boosters/utils'
+import { boostersDraftForRoom, boostersLPForRoom, removeCardFromBooster } from './state/boosters/utils'
 import { customSets } from './state/customSets/customSets'
 import { customSetsForRoom } from './state/customSets/utils'
 import { roomPlayers } from './state/roomPlayers'
-import { assignPlayersPositions, removeNotReadyPlayers, roomPlayersForRoom } from './state/roomPlayers/utils'
+import { assignPlayersPositions, removeNotReadyPlayers, roomPlayersForRoom, updatePlayerPositions } from './state/roomPlayers/utils'
 import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
@@ -93,7 +93,8 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
     expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostPlayer.id],
-    customSetIds: customSetsNew.map((set) => set.id)
+    customSetIds: customSetsNew.map((set) => set.id),
+    numPlayers: 8
   }
   stateAddWithMutation(rooms, [roomNew])
 
@@ -158,6 +159,27 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
 
   removeNotReadyPlayers(room)
   assignPlayersPositions(room)
+
+  const result: RoomResult = {
+    room,
+    roomPlayers: roomPlayersForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room),
+    boostersDraft: boostersDraftForRoom(room)
+  }
+  res.json(result)
+})
+
+app.post(`${baseApiUrl}/room/draftPicks/:id`, (req, res: Response<RoomResult>) => {
+  const roomId = req.params.id
+  const draftPicks: {boosterId: string, cardId: string}[] = req.body.draftPicks
+  const room = rooms.byId[roomId]
+
+  draftPicks.forEach((pick) => {
+    removeCardFromBooster(pick.cardId, pick.boosterId)
+  })
+
+  updatePlayerPositions(room)
 
   const result: RoomResult = {
     room,

@@ -31,3 +31,9 @@ export function boostersDraftForRoom(room: Room): State<Booster> {
     } 
     return result
   }
+
+export function removeCardFromBooster(cardId: string, boosterId: string ) {
+    const cardIds = [...boosters.byId[boosterId].cardIds!]
+    cardIds.splice(cardIds.findIndex((id) => id === cardId), 1)
+    boosters.byId[boosterId].cardIds = cardIds
+}

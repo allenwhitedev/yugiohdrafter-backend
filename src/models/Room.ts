@@ -6,5 +6,6 @@ export interface Room {
   boosterIdsLP: string[],
   roomPlayerIds: string[],
   customSetIds: string[]
+  numPlayers: number
   boosterIdsDraft?: string[],
 }
