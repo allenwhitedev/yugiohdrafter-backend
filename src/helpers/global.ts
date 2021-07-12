@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
 
 // - global constants
-export const ROOM_DEFAULT_EXPIRATION = 30 // 30 minutes
+export const ROOM_DEFAULT_EXPIRATION_IN_MINUTES = 30 // 30 minutes
+export const ROOM_DEFAULT_EXPIRATION_MAX_IN_HOURS = 24 // 24 hours
 const RETRY_ID_COLLISIONS_NUM = 3 // even with 4-char strings, more than 3 collision is highly unlikely
 
 export function unique4CharString(byId: {[id: string]: {}}) { // generate uuid and use first 4 characters

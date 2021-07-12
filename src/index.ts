@@ -3,7 +3,7 @@ import express, { Response } from 'express'
 import moment from 'moment'
 import mongodb from 'mongodb'
 import { RoomResult } from './contracts/RoomResult'
-import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
+import { ROOM_DEFAULT_EXPIRATION_IN_MINUTES, ROOM_DEFAULT_EXPIRATION_MAX_IN_HOURS, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
@@ -43,8 +43,8 @@ app.get(`${baseApiUrl}/`, (req, res) => res.send('Express + TypeScript Server'))
 app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just successfully queried yugiohdrafter-backend'}))
 
 // -- rooms
-app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
-app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
+app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms)) // GET all rooms
+app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => { // GET single room by id 
   const room = rooms.byId[req.params.id]
   const roomPlayers = roomPlayersForRoom(room)
   const result: RoomResult = {
@@ -53,56 +53,28 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
   }
   return res.json(result)
 })
-app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>) => {
-  const room = rooms.byId[req.params.id]
-  const roomPlayers = roomPlayersForRoom(room)
-  if(req.body.player.name !== undefined) 
-    roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
-  if(req.body.player.isReady !== undefined)
-    roomPlayers.byId[req.body.player.ip + "-" + req.params.id].isReady = req.body.player.isReady
-
-  const result: RoomResult = {
-    room,
-    roomPlayers,
-  }
-  return res.json(result)
-})
-app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
-  const roomId = unique4CharString(rooms.byId)
+app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>, next) => { // update roomPlayer (isReady, etc.)
+  try {
+    const room = rooms.byId[req.params.id]
+    const roomPlayers = roomPlayersForRoom(room)
+    if (req.body.player.name !== undefined) 
+      roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
+    if (req.body.player.isReady !== undefined)
+      roomPlayers.byId[req.body.player.ip + "-" + req.params.id].isReady = req.body.player.isReady
   
-  const hostPlayer: RoomPlayer = {
-    id: req.body.player.ip + "-" + roomId,
-    name: req.body.player.name,
-    isHost: true,
-    isReady: false,
-    ip: req.body.player.ip
-  }
-  stateAddWithMutation(roomPlayers, [hostPlayer])
+    room.expires = moment().add(ROOM_DEFAULT_EXPIRATION_IN_MINUTES, 'minute') // update to room extends its expiration
 
-  const boostersNew: Booster[] = req.body.boostersLP
-  const roomNew: Room = {
-    id: roomId,
-    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
-    boosterIdsRound: [],
-    boosterIdsLP: boostersNew.map((booster) => booster.id),
-    roomPlayerIds: [hostPlayer.id]
-  }
-  stateAddWithMutation(rooms, [roomNew])
-
-  boostersNew.forEach((booster) => {
-    stateAddWithMutation(boosters, [booster])
-  })
-  const result: RoomResult = {
-    room: roomNew,
-    roomPlayers: {
-      allIds: roomNew.roomPlayerIds,
-      byId: { [hostPlayer.id]: hostPlayer }, 
+    const result: RoomResult = {
+      room,
+      roomPlayers,
     }
+    return res.json(result)
+  } catch (error: any) {
+    return next(error) // express will handle error + send a 500 HTTP status code
   }
-  res.json(result)
 })
 
-app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => {
+app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => { // add player to existing room
   const player: RoomPlayer = {
     id: req.body.player.ip + "-" + req.params.id,
     name: req.body.player.name,
@@ -114,8 +86,10 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
 
   const room = rooms.byId[req.params.id]
   // treat like a Set to enforce unique entries (JS Set is annoying to serialize)
-  if (!room.roomPlayerIds.includes(player.id)) 
+  if (!room.roomPlayerIds.includes(player.id)) {
     room.roomPlayerIds.push(player.id)
+    room.expires = moment().add(ROOM_DEFAULT_EXPIRATION_IN_MINUTES, 'minute') // update to room extends its expiration
+  }
 
   // return name of set or array of card ids that must be retrieved client side
   const cardSets = new Set<string | string[]>()
@@ -135,7 +109,7 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
   return res.json(result)
 })
 
-app.post(`${baseApiUrl}/room`, (req, res) => {
+app.post(`${baseApiUrl}/room`, (req, res) => { // create new room
   const roomId = unique4CharString(rooms.byId)
 
   // add landing page boosters (not the ones for a round)
@@ -158,7 +132,8 @@ app.post(`${baseApiUrl}/room`, (req, res) => {
   // create the room
   const roomNew: Room = {
     id: roomId,
-    expires: moment().add(ROOM_DEFAULT_EXPIRATION, 'minute'),
+    expires: moment().add(ROOM_DEFAULT_EXPIRATION_IN_MINUTES, 'minute'),
+    expiresMax: moment().add(ROOM_DEFAULT_EXPIRATION_MAX_IN_HOURS, 'hour'),
     boosterIdsRound: [],
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostId]
