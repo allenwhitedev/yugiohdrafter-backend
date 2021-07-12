@@ -5,6 +5,7 @@ import mongodb from 'mongodb'
 import { RoomResult } from './contracts/RoomResult'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
+import { CardPick } from './models/CardPick'
 import { CardSet } from './models/CardSet'
 import { Room } from './models/Room'
 import { RoomPlayer } from './models/RoomPlayer'
@@ -172,7 +173,7 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
 
 app.post(`${baseApiUrl}/room/draftPicks/:id`, (req, res: Response<RoomResult>) => {
   const roomId = req.params.id
-  const draftPicks: {boosterId: string, cardId: string}[] = req.body.draftPicks
+  const draftPicks: CardPick[] = req.body.draftPicks
   const room = rooms.byId[roomId]
 
   draftPicks.forEach((pick) => {

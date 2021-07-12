@@ -2,6 +2,7 @@ import { roomPlayers } from ".";
 import { Room } from "../../models/Room";
 import { RoomPlayer } from "../../models/RoomPlayer";
 import { State } from "../../models/State";
+import { boosters } from "../boosters/boosters";
 import { stateRemoveIdsWithMutation } from "../utils";
 
 function shuffleArray(array: any[]) {
@@ -48,8 +49,12 @@ export function assignPlayersPositions(room: Room) {
 }
 
 export function updatePlayerPositions(room: Room) {
-  room.roomPlayerIds.forEach((id) => {
-    const player = roomPlayers.byId[id]
-    player.position = player.position === room.numPlayers - 1 ? 0 : player.position! + 1
-  })
+  const draftBoosters = room.boosterIdsDraft!.map((id) => boosters.byId[id])
+  if(draftBoosters.every((booster) => booster.cardIds?.length === draftBoosters[0].cardIds?.length)) {
+    room.roomPlayerIds.forEach((id) => {
+      const player = roomPlayers.byId[id]
+      player.position = player.position === room.numPlayers - 1 ? 0 : player.position! + 1
+    })
+  }
+  
 }
