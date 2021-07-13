@@ -55,7 +55,7 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
   const result: RoomResult = {
     room,
     roomPlayers,
-    boostersDraft: boostersDraftForRoom(room)
+    boostersDraft: boostersDraftForRoom(room),
   }
   return res.json(result)
 })
@@ -152,6 +152,7 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
   const boostersNew: Booster[] = req.body.boostersDraft
   const room = rooms.byId[roomId]
 
+  room.currLPBoosterId = room.boosterIdsLP[0]
   room.boosterIdsDraft = boostersNew.map((booster) => booster.id)
 
   boostersNew.forEach((booster) => {
@@ -160,6 +161,28 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
 
   removeNotReadyPlayers(room)
   assignPlayersPositions(room)
+
+  const result: RoomResult = {
+    room,
+    roomPlayers: roomPlayersForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room),
+    boostersDraft: boostersDraftForRoom(room)
+  }
+  res.json(result)
+})
+
+app.post(`${baseApiUrl}/room/nextRound/:id`, (req, res: Response<RoomResult>) => {
+  const roomId = req.params.id
+  const boostersNew: Booster[] = req.body.boostersDraft
+  const room = rooms.byId[roomId]
+
+  room.currLPBoosterId = room.boosterIdsLP[room.boosterIdsLP.findIndex((id) => id === room.currLPBoosterId) + 1]
+  room.boosterIdsDraft = boostersNew.map((booster) => booster.id)
+
+  boostersNew.forEach((booster) => {
+    stateAddWithMutation(boosters, [booster])
+  })
 
   const result: RoomResult = {
     room,

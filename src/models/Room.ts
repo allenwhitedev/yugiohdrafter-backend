@@ -8,4 +8,5 @@ export interface Room {
   customSetIds: string[]
   numPlayers: number
   boosterIdsDraft?: string[],
+  currLPBoosterId?: string
 }
