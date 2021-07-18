@@ -95,7 +95,9 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
     boosterIdsLP: boostersNew.map((booster) => booster.id),
     roomPlayerIds: [hostPlayer.id],
     customSetIds: customSetsNew.map((set) => set.id),
-    numPlayers: 8
+    numPlayers: 8,
+    started: false,
+    format: req.body.format
   }
   stateAddWithMutation(rooms, [roomNew])
 
@@ -142,7 +144,7 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
     room,
     roomPlayers: roomPlayersForRoom(room),
     boostersLP: boostersLPForRoom(room),
-    customSets: customSetsForRoom(room)
+    customSets: customSetsForRoom(room),
   }
   return res.json(result)
 })
@@ -154,6 +156,7 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
 
   room.currLPBoosterId = room.boosterIdsLP[0]
   room.boosterIdsDraft = boostersNew.map((booster) => booster.id)
+  room.started = true
 
   boostersNew.forEach((booster) => {
     stateAddWithMutation(boosters, [booster])
@@ -161,6 +164,24 @@ app.post(`${baseApiUrl}/room/startDraft/:id`, (req, res: Response<RoomResult>) =
 
   removeNotReadyPlayers(room)
   assignPlayersPositions(room)
+
+  const result: RoomResult = {
+    room,
+    roomPlayers: roomPlayersForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room),
+    boostersDraft: boostersDraftForRoom(room)
+  }
+  res.json(result)
+})
+
+app.post(`${baseApiUrl}/room/startSealed/:id`, (req, res: Response<RoomResult>) => {
+  const roomId = req.params.id
+  const room = rooms.byId[roomId]
+
+  room.started = true
+
+  removeNotReadyPlayers(room)
 
   const result: RoomResult = {
     room,
