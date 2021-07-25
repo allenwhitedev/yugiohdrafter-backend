@@ -3,10 +3,10 @@ import { State, StateItem } from "../models/State";
 export function stateAddWithMutation<T extends StateItem>(state: State<T>, items: Array<T>) {
   for (const item of items) {
     const id = item.id
-    if (state.allIds.includes(id))
+    if (!state.allIds.includes(id)) {
       state.allIds.push(id)
-
-    state.byId[id] = item
+      state.byId[id] = item
+    }
   }
 }
 
