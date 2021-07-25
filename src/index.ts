@@ -99,7 +99,6 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
     started: false,
     format: req.body.format
   }
-  stateAddWithMutation(rooms, [roomNew])
 
   boostersNew.forEach((booster) => {
     stateAddWithMutation(boosters, [booster])
