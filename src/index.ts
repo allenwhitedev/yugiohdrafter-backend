@@ -229,6 +229,7 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
     set_code: b.set_code,
     set_name: b.set_name,
     tcg_date: b.tcg_date,
+    card_ids: b.card_ids
   }
   const dbResult = await collections.cardSets?.insertOne(customSet)
 
@@ -241,14 +242,6 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
 
 app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
   const b = req.body
-  const customSet: CardSet = {
-    custom_set: b.custom_set,
-    id: b.id,
-    num_of_cards: b.num_of_cards,
-    set_code: b.set_code,
-    set_name: b.set_name,
-    tcg_date: b.tcg_date,
-  }
   const setsFromDb = await collections.cardSets?.find().toArray()
   return res.json(setsFromDb)
 })
