@@ -1,8 +1,8 @@
 import cors from 'cors'
 import express, { Response } from 'express'
 import moment from 'moment'
-import mongodb from 'mongodb'
 import { RoomResult } from './contracts/RoomResult'
+import { collections, connectToDatabase } from './db'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
 import { CardPick } from './models/CardPick'
@@ -25,22 +25,6 @@ if (!isProductionEnv) // if in development environment allow cors from frontend 
 
 app.use(express.json()); //Used to parse JSON bodies
 app.use(express.urlencoded()); //Parse URL-encoded bodies
-
-// - initialize mongo db client
-var MongoClient = mongodb.MongoClient
-
-MongoClient.connect('mongodb://localhost:27017/yugiohdrafter', function (err: any, client: { db: (arg0: string) => any }) {
-  if (err) throw err
-
-  var db = client.db('yugiohdrafter')
-
-  db.collection('mammals').find().toArray(function (err: any, result: any) {
-    if (err) throw err
-
-    console.log(result)
-  })
-})
-
 
 // - routes
 const baseApiUrl = '/api'
@@ -235,9 +219,44 @@ app.post(`${baseApiUrl}/room/draftPicks/:id`, (req, res: Response<RoomResult>) =
   res.json(result)
 })
 
+// - cardSets
+app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
+  const b = req.body
+  const customSet: CardSet = {
+    custom_set: b.custom_set,
+    id: b.id,
+    num_of_cards: b.num_of_cards,
+    set_code: b.set_code,
+    set_name: b.set_name,
+    tcg_date: b.tcg_date,
+  }
+  const dbResult = await collections.cardSets?.insertOne(customSet)
+
+  console.dir(dbResult?.result)
+  if (dbResult?.result.ok)
+    res.json(customSet) 
+  else
+    res.json({error: `Could not insert card set '${req.body.set_name}'. ${dbResult?.result}`})
+})
+
+app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
+  const b = req.body
+  const customSet: CardSet = {
+    custom_set: b.custom_set,
+    id: b.id,
+    num_of_cards: b.num_of_cards,
+    set_code: b.set_code,
+    set_name: b.set_name,
+    tcg_date: b.tcg_date,
+  }
+  const setsFromDb = await collections.cardSets?.find().toArray()
+  return res.json(setsFromDb)
+})
+
 // - start application
 const PORT = 8000
 const envString = isProductionEnv ? 'Production' : 'Development'
 const serverStartMessage = `⚡️[server]: ${envString} server is running at https://localhost:${PORT}`
 
+connectToDatabase()
 app.listen(PORT, () => { console.log(serverStartMessage) })
