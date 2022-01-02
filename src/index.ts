@@ -242,6 +242,7 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
 app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
   const b = req.body
   const customSet: CardSet = {
+    card_ids: b.card_ids,
     custom_set: b.custom_set,
     id: b.id,
     num_of_cards: b.num_of_cards,
