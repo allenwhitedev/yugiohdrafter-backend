@@ -232,11 +232,21 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
   }
   const dbResult = await collections.cardSets?.insertOne(customSet)
 
-  console.dir(dbResult?.result)
   if (dbResult?.result.ok)
     res.json(customSet) 
   else
     res.json({error: `Could not insert card set '${req.body.set_name}'. ${dbResult?.result}`})
+})
+
+app.delete(`${baseApiUrl}/cardSet/:ids`, async (req, res) => {
+  const idsToDelete = req.params.ids.split(',')
+
+  const dbResult = await collections.cardSets?.deleteMany({id: {$in: idsToDelete}})
+
+  if (dbResult?.result.ok)
+    res.json({message: `Successfully deleted ${dbResult.deletedCount}`}) 
+  else
+    res.json({error: `Could not delete card set(s) '${req.params.ids}'. ${dbResult?.result}`})
 })
 
 app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
