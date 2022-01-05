@@ -1,4 +1,4 @@
-export interface CardSet{
+export interface CardSet {
     id: string,
     set_name: string,
     set_code: string,
@@ -6,4 +6,5 @@ export interface CardSet{
     tcg_date: string
     card_ids?: string[]
     custom_set?: boolean
+    author?: string // i.p. identifier for custom sets
 }
