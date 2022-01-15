@@ -2,7 +2,7 @@ import cors from 'cors'
 import express, { Response } from 'express'
 import moment from 'moment'
 import { RoomResult } from './contracts/RoomResult'
-import { collections, connectToDatabase } from './db'
+import { collections, connectToDatabase, MONGODB_URI } from './db'
 import { ROOM_DEFAULT_EXPIRATION, unique4CharString } from './helpers/global'
 import { Booster } from './models/Booster'
 import { CardPick } from './models/CardPick'
@@ -19,7 +19,14 @@ import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 import bcrypt from 'bcrypt';
 import { User } from './models/User'
+import session from 'express-session';
+import ConnectMongoDBSession from 'connect-mongodb-session'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
+const MongoDBStore = ConnectMongoDBSession(session)
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: "mySessions"
+})
 
 const app = express() // initialize express server
 if (!isProductionEnv) // if in development environment allow cors from frontend dev origin 
@@ -27,6 +34,12 @@ if (!isProductionEnv) // if in development environment allow cors from frontend 
 
 app.use(express.json()); //Used to parse JSON bodies
 app.use(express.urlencoded()); //Parse URL-encoded bodies
+app.use(session({
+  secret: "yugiohdraftersecretkey",
+  resave: false,
+  saveUninitialized: true,
+  store,
+}))
 
 // - routes
 const baseApiUrl = '/api'
@@ -47,8 +60,11 @@ app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
     const dbResult = await collections.users?.insertOne(user)
 
     console.dir(dbResult?.result)
-    if (dbResult?.result.ok)
-      res.json(user) 
+    if (dbResult?.result.ok){
+      res.json(user);
+      (req.session as any).isAuth = true
+      console.log(req.session)
+    }
     else
       return res.status(500).json({error: `Could not create user '. ${dbResult?.result}`})
     return res.status(201).end();

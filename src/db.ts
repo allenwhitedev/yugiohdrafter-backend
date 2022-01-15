@@ -5,12 +5,13 @@ import { User } from "./models/User";
 
 // Global Variables
 export const collections: { cardSets?: Collection<CardSet>, users?: Collection<User> } = {}
+export const MONGODB_URI = 'mongodb://localhost:27017/yugiohdrafter'
 
 // Initialize Connection
 // - initialize mongo db client
 export async function connectToDatabase () {
 
-  const client: MongoClient = new MongoClient('mongodb://localhost:27017/yugiohdrafter');
+  const client: MongoClient = new MongoClient(MONGODB_URI);
           
   await client.connect();
       
