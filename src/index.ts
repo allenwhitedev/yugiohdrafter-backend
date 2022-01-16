@@ -18,9 +18,9 @@ import { assignPlayersPositions, removeNotReadyPlayers, roomPlayersForRoom, upda
 import { rooms } from './state/rooms'
 import { stateAddWithMutation } from './state/utils'
 import bcrypt from 'bcrypt';
-import { User } from './models/User'
 import session from 'express-session';
 import ConnectMongoDBSession from 'connect-mongodb-session'
+import { User } from './models/User'
 const isProductionEnv = process.env.NODE_ENV === 'production' 
 const MongoDBStore = ConnectMongoDBSession(session)
 const store = new MongoDBStore({
@@ -37,7 +37,7 @@ app.use(express.urlencoded()); //Parse URL-encoded bodies
 app.use(session({
   secret: "yugiohdraftersecretkey",
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   store,
 }))
 
@@ -47,6 +47,23 @@ app.get(`${baseApiUrl}/`, (req, res) => res.send('Express + TypeScript Server'))
 app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just successfully queried yugiohdrafter-backend'}))
 
 // login
+// verify user has active session
+// if active session, send email to client
+app.get(`${baseApiUrl}/users/`, (req, res) => {
+  if((req.session as any).isAuth){
+    return res.send((req.session as any).email)
+  } else {
+    return res.send(("No active session")) 
+  }
+})
+
+app.get(`${baseApiUrl}/users/logout`, (req, res) => {
+  req.session.destroy((err) => {
+    if (err) throw err;
+    return res.send("Success")
+  });
+})
+
 app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
   const users = await collections.users?.find().toArray()!
   const user = users.find((user) => user.email === req.body.email)
@@ -59,15 +76,13 @@ app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
     const user: User = { email: req.body.email, password: hashedPassword }
     const dbResult = await collections.users?.insertOne(user)
 
-    console.dir(dbResult?.result)
     if (dbResult?.result.ok){
-      res.json(user);
-      (req.session as any).isAuth = true
-      console.log(req.session)
+      (req.session as any).isAuth = true;
+      (req.session as any).email = req.body.email;
     }
     else
       return res.status(500).json({error: `Could not create user '. ${dbResult?.result}`})
-    return res.status(201).end();
+    return res.json(dbResult);
   }
   catch(e) {
     return res.status(500).end();
@@ -83,6 +98,8 @@ app.post(`${baseApiUrl}/users/login`, async (req, res) => {
   }
   try {
     if( await bcrypt.compare(req.body.password, user.password)) {
+      (req.session as any).isAuth = true;
+      (req.session as any).email = req.body.email;
       return res.send("Success")
     } else {
       return res.status(401).json({error: "Incorrect Password"})
