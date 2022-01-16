@@ -21,7 +21,10 @@ import bcrypt from 'bcrypt';
 import session from 'express-session';
 import ConnectMongoDBSession from 'connect-mongodb-session'
 import { User } from './models/User'
-const isProductionEnv = process.env.NODE_ENV === 'production' 
+import emailkey from './emailkey'
+const axios = require("axios")
+
+const isProductionEnv = process.env.NODE_ENV === 'production'
 const MongoDBStore = ConnectMongoDBSession(session)
 const store = new MongoDBStore({
   uri: MONGODB_URI,
@@ -30,7 +33,7 @@ const store = new MongoDBStore({
 
 const app = express() // initialize express server
 if (!isProductionEnv) // if in development environment allow cors from frontend dev origin 
-  app.use(cors({origin:'http://localhost:3000'}))
+  app.use(cors({ origin: 'http://localhost:3000' }))
 
 app.use(express.json()); //Used to parse JSON bodies
 app.use(express.urlencoded()); //Parse URL-encoded bodies
@@ -44,16 +47,16 @@ app.use(session({
 // - routes
 const baseApiUrl = '/api'
 app.get(`${baseApiUrl}/`, (req, res) => res.send('Express + TypeScript Server'))
-app.get(`${baseApiUrl}/test`, (req, res) => res.json({message: 'You just successfully queried yugiohdrafter-backend'}))
+app.get(`${baseApiUrl}/test`, (req, res) => res.json({ message: 'You just successfully queried yugiohdrafter-backend' }))
 
 // login
 // verify user has active session
 // if active session, send email to client
 app.get(`${baseApiUrl}/users/`, (req, res) => {
-  if((req.session as any).isAuth){
+  if ((req.session as any).isAuth) {
     return res.send((req.session as any).email)
   } else {
-    return res.send(("No active session")) 
+    return res.send(("No active session"))
   }
 })
 
@@ -68,7 +71,7 @@ app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
   const users = await collections.users?.find().toArray()!
   const user = users.find((user) => user.email === req.body.email)
   if (user) {
-    return res.status(500).json({error: "User already exists with this email"})
+    return res.status(500).json({ error: "User already exists with this email" })
   }
   try {
     const salt = await bcrypt.genSalt()
@@ -76,41 +79,95 @@ app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
     const user: User = { email: req.body.email, password: hashedPassword }
     const dbResult = await collections.users?.insertOne(user)
 
-    if (dbResult?.result.ok){
+    if (dbResult?.result.ok) {
       (req.session as any).isAuth = true;
       (req.session as any).email = req.body.email;
     }
     else
-      return res.status(500).json({error: `Could not create user '. ${dbResult?.result}`})
+      return res.status(500).json({ error: `Could not create user '. ${dbResult?.result}` })
     return res.json(dbResult);
   }
-  catch(e) {
+  catch (e) {
     return res.status(500).end();
   }
-  
+
 })
 
 app.post(`${baseApiUrl}/users/login`, async (req, res) => {
   const users = await collections.users?.find().toArray()!
   const user = users.find((user) => user.email === req.body.email)
   if (!user) {
-    return res.status(400).json({error: "Cannot find this email address"})
+    return res.status(400).json({ error: "Cannot find this email address" })
   }
   try {
-    if( await bcrypt.compare(req.body.password, user.password)) {
+    if (await bcrypt.compare(req.body.password, user.password)) {
       (req.session as any).isAuth = true;
       (req.session as any).email = req.body.email;
       return res.send("Success")
     } else {
-      return res.status(401).json({error: "Incorrect Password"})
+      return res.status(401).json({ error: "Incorrect Password" })
     }
   }
-  catch(e) {
+  catch (e) {
     return res.status(500).end()
   }
-  
+
 })
 
+app.get(`${baseApiUrl}/users/resetPassword/:email`, (req, res) => {
+  const template_params = {
+    reset_password_link: "www.google.com",
+    send_to: "danielschneider22@gmail.com"
+  }
+
+  // emailjs.send(emailkey.SERVICE_ID, emailkey.TEMPLATE_ID, templateParams, emailkey.USER_ID)
+  //   .then(function (response) {
+  //     return res.send("Success")
+  //   }, function (error) {
+  //     return res.status(500).end()
+  //   });
+
+  var data = {
+    service_id: emailkey.SERVICE_ID,
+    template_id: emailkey.TEMPLATE_ID,
+    user_id: emailkey.USER_ID,
+    template_params
+  };
+
+  // $.ajax('https://api.emailjs.com/api/v1.0/email/send', {
+  //   type: 'POST',
+  //   data: JSON.stringify(data),
+  //   contentType: 'application/json'
+  // }).done(function () {
+  //   alert('Your mail is sent!');
+  // }).fail(function (error) {
+  //   alert('Oops... ' + JSON.stringify(error));
+  // });
+
+  const headers = { 'Content-Type': 'application/json' }
+  axios.post('https://api.emailjs.com/api/v1.0/email/send', JSON.stringify(data), { headers })
+    .then((response: any) => {
+      console.log(response)
+      res.send("Success")
+    })
+    .catch((err: any) => {
+      res.status(500).send(err.response.data)
+    });
+
+  // fetch('https://api.emailjs.com/api/v1.0/email/send', {
+  //   method: 'POST',
+  //   body: JSON.stringify(data),
+  //   headers: { 'Content-Type': 'application/json' }
+  // })
+  //   .then((result: { json: () => any }) => result.json())
+  //   .then((json: any) => {
+  //     console.log(json)
+  //     res.send("Success")
+  //   })
+  //   .catch((err: any) => {
+  //     res.status(500).send(err)
+  //   });
+})
 // -- rooms
 app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
 app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
@@ -126,9 +183,9 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
 app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>) => {
   const room = rooms.byId[req.params.id]
   const roomPlayers = roomPlayersForRoom(room)
-  if(req.body.player.name !== undefined) 
+  if (req.body.player.name !== undefined)
     roomPlayers.byId[req.body.player.ip + "-" + req.params.id].name = req.body.player.name
-  if(req.body.player.isReady !== undefined)
+  if (req.body.player.isReady !== undefined)
     roomPlayers.byId[req.body.player.ip + "-" + req.params.id].isReady = req.body.player.isReady
 
   const result: RoomResult = {
@@ -141,7 +198,7 @@ app.post(`${baseApiUrl}/room/updatePlayer/:id`, (req, res: Response<RoomResult>)
 
 app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   const roomId = unique4CharString(rooms.byId)
-  
+
   const hostPlayer: RoomPlayer = {
     id: req.body.player.ip + "-" + roomId,
     name: req.body.player.name,
@@ -170,14 +227,14 @@ app.post(`${baseApiUrl}/room`, (req, res: Response<RoomResult>) => {
   customSetsNew.forEach((set) => {
     stateAddWithMutation(customSets, [set])
   })
-  
+
   stateAddWithMutation(rooms, [roomNew])
 
   const result: RoomResult = {
     room: roomNew,
     roomPlayers: {
       allIds: roomNew.roomPlayerIds,
-      byId: { [hostPlayer.id]: hostPlayer }, 
+      byId: { [hostPlayer.id]: hostPlayer },
     }
   }
   res.json(result)
@@ -195,13 +252,13 @@ app.post(`${baseApiUrl}/room/joinRoom/:id`, (req, res: Response<RoomResult>) => 
 
   const room = rooms.byId[req.params.id]
   // treat like a Set to enforce unique entries (JS Set is annoying to serialize)
-  if (!room.roomPlayerIds.includes(player.id)) 
+  if (!room.roomPlayerIds.includes(player.id))
     room.roomPlayerIds.push(player.id)
-  
+
   // - return room players for room client is joining
   const currRoomPlayersById: { [id: string]: RoomPlayer } = {}
   room.roomPlayerIds.forEach(id => {
-   currRoomPlayersById[id] = roomPlayers.byId[id]
+    currRoomPlayersById[id] = roomPlayers.byId[id]
   })
   const result: RoomResult = {
     room,
@@ -315,9 +372,9 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
 
   console.dir(dbResult?.result)
   if (dbResult?.result.ok)
-    res.json(customSet) 
+    res.json(customSet)
   else
-    res.json({error: `Could not insert card set '${req.body.set_name}'. ${dbResult?.result}`})
+    res.json({ error: `Could not insert card set '${req.body.set_name}'. ${dbResult?.result}` })
 })
 
 app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
