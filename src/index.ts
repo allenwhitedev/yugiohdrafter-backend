@@ -120,29 +120,13 @@ app.get(`${baseApiUrl}/users/resetPassword/:email`, (req, res) => {
     send_to: "danielschneider22@gmail.com"
   }
 
-  // emailjs.send(emailkey.SERVICE_ID, emailkey.TEMPLATE_ID, templateParams, emailkey.USER_ID)
-  //   .then(function (response) {
-  //     return res.send("Success")
-  //   }, function (error) {
-  //     return res.status(500).end()
-  //   });
-
   var data = {
     service_id: emailkey.SERVICE_ID,
     template_id: emailkey.TEMPLATE_ID,
     user_id: emailkey.USER_ID,
-    template_params
+    template_params,
+    accessToken: "fd5a6b1c8fb97909cddadeaa79c74dbd"
   };
-
-  // $.ajax('https://api.emailjs.com/api/v1.0/email/send', {
-  //   type: 'POST',
-  //   data: JSON.stringify(data),
-  //   contentType: 'application/json'
-  // }).done(function () {
-  //   alert('Your mail is sent!');
-  // }).fail(function (error) {
-  //   alert('Oops... ' + JSON.stringify(error));
-  // });
 
   const headers = { 'Content-Type': 'application/json' }
   axios.post('https://api.emailjs.com/api/v1.0/email/send', JSON.stringify(data), { headers })
