@@ -22,6 +22,8 @@ import session from 'express-session';
 import ConnectMongoDBSession from 'connect-mongodb-session'
 import { User } from './models/User'
 import emailkey from './emailkey'
+import { v4 as uuidv4 } from 'uuid';
+import { resetPasswordDict } from './state/resetPasswords/resetPasswords'
 const axios = require("axios")
 
 const isProductionEnv = process.env.NODE_ENV === 'production'
@@ -114,10 +116,18 @@ app.post(`${baseApiUrl}/users/login`, async (req, res) => {
 
 })
 
-app.get(`${baseApiUrl}/users/resetPassword/:email`, (req, res) => {
+app.get(`${baseApiUrl}/users/sendRecoveryEmail/:email`, async (req, res) => {
+  const users = await collections.users?.find().toArray()!
+  const user = users.find((user) => user.email === req.params.email)
+  if (!user) {
+    return res.status(400).json({ error: "A user does not exist with this email address" })
+  }
+
+  const randomId = uuidv4()
+  const email = req.params.email
   const template_params = {
-    reset_password_link: "www.google.com",
-    send_to: "danielschneider22@gmail.com"
+    reset_password_link: isProductionEnv ? `yugiohdrafter.com/resetPassword/${randomId}` : `localhost:3000/resetPassword/${randomId}`,
+    send_to: email
   }
 
   var data = {
@@ -132,25 +142,43 @@ app.get(`${baseApiUrl}/users/resetPassword/:email`, (req, res) => {
   axios.post('https://api.emailjs.com/api/v1.0/email/send', JSON.stringify(data), { headers })
     .then((response: any) => {
       console.log(response)
+      resetPasswordDict[randomId] = email
+      console.log(resetPasswordDict)
       res.send("Success")
     })
     .catch((err: any) => {
       res.status(500).send(err.response.data)
     });
+})
 
-  // fetch('https://api.emailjs.com/api/v1.0/email/send', {
-  //   method: 'POST',
-  //   body: JSON.stringify(data),
-  //   headers: { 'Content-Type': 'application/json' }
-  // })
-  //   .then((result: { json: () => any }) => result.json())
-  //   .then((json: any) => {
-  //     console.log(json)
-  //     res.send("Success")
-  //   })
-  //   .catch((err: any) => {
-  //     res.status(500).send(err)
-  //   });
+app.post(`${baseApiUrl}/users/resetPassword`, async (req, res) => {
+  console.log(resetPasswordDict)
+  const email = resetPasswordDict[req.body.uuid]
+  if(!email) {
+    return res.status(401).json({ error: "No email recovery sent for this account." })
+  }
+  const users = await collections.users?.find().toArray()!
+  const user = users.find((user) => user.email === email)
+  if (!user) {
+    return res.status(400).json({ error: "Cannot find this email address" })
+  }
+  try {
+    const salt = await bcrypt.genSalt()
+    const hashedPassword = await bcrypt.hash(req.body.password, salt)
+    const dbResult = await collections.users?.updateOne({email}, {$set: { password: hashedPassword}})
+
+    if (dbResult?.result.ok) {
+      (req.session as any).isAuth = true;
+      (req.session as any).email = email;
+    }
+    else
+      return res.status(500).json({ error: `Could not update password '. ${dbResult?.result}` })
+    return res.json(dbResult);
+  }
+  catch (e) {
+    return res.status(500).end();
+  }
+
 })
 // -- rooms
 app.get(`${baseApiUrl}/room`, (req, res) => res.json(rooms))
