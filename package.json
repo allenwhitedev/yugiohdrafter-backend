@@ -10,12 +10,18 @@
     "build": "tsc --project ./ && cp -r src/static build/src/"
   },
   "dependencies": {
+    "@types/connect-mongodb-session": "^2.4.2",
+    "@types/express-session": "^1.17.4",
+    "bcrypt": "^5.0.1",
+    "connect-mongodb-session": "^3.1.1",
     "cors": "2.8.5",
     "express": "4.17.1",
+    "express-session": "^1.17.2",
     "moment": "2.29.1",
     "mongodb": "3.6.9"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
     "@types/cors": "2.8.10",
     "@types/express": "4.17.12",
     "@types/mongodb": "3.6.18",
