@@ -193,6 +193,8 @@ app.get(`${baseApiUrl}/room/:id`, (req, res: Response<RoomResult>) => {
     room,
     roomPlayers,
     boostersDraft: boostersDraftForRoom(room),
+    boostersLP: boostersLPForRoom(room),
+    customSets: customSetsForRoom(room),
   }
   return res.json(result)
 })
