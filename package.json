@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "start": "nodemon src/index.ts",
-    "build": "tsc --project ./ && cp -r src/static build/src/"
+    "build": "tsc --project ./",
+    "postbuild": "cp package.json ./build/ && cd build && yarn install --production=true"
   },
   "dependencies": {
     "@types/connect-mongodb-session": "^2.4.2",
