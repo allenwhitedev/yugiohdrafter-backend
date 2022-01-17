@@ -6,5 +6,5 @@ export interface CardSet {
     tcg_date: string
     card_ids?: string[]
     custom_set?: boolean
-    author?: string // i.p. identifier for custom sets
+    author?: string
 }
