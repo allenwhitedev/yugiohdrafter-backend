@@ -8,7 +8,7 @@
   "scripts": {
     "start": "nodemon src/index.ts",
     "build": "tsc --project ./",
-    "postbuild": "cp package.json ./build/ && cd build && yarn install --production=true"
+    "postbuild": "cp package.json ./build/"
   },
   "dependencies": {
     "@types/connect-mongodb-session": "^2.4.2",
