@@ -24,6 +24,7 @@ import { User } from './models/User'
 import emailkey from './emailkey'
 import { v4 as uuidv4 } from 'uuid';
 import { resetPasswordDict } from './state/resetPasswords/resetPasswords'
+import { ExtendedSession } from './models/ExtendedSession'
 const axios = require("axios")
 
 const isProductionEnv = process.env.NODE_ENV === 'production'
@@ -55,8 +56,10 @@ app.get(`${baseApiUrl}/test`, (req, res) => res.json({ message: 'You just succes
 // verify user has active session
 // if active session, send email to client
 app.get(`${baseApiUrl}/users/`, (req, res) => {
-  if ((req.session as any).isAuth) {
-    return res.send((req.session as any).email)
+  const userSession = req.session as ExtendedSession
+
+  if (userSession.isAuth) {
+    return res.send(userSession.email)
   } else {
     return res.send(("No active session"))
   }
@@ -70,6 +73,7 @@ app.get(`${baseApiUrl}/users/logout`, (req, res) => {
 })
 
 app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
+  const userSession = req.session as ExtendedSession
   const users = await collections.users?.find().toArray()!
   const user = users.find((user) => user.email === req.body.email)
   if (user) {
@@ -82,8 +86,8 @@ app.post(`${baseApiUrl}/users/createAccount`, async (req, res) => {
     const dbResult = await collections.users?.insertOne(user)
 
     if (dbResult?.result.ok) {
-      (req.session as any).isAuth = true;
-      (req.session as any).email = req.body.email;
+      userSession.isAuth = true;
+      userSession.email = req.body.email;
     }
     else
       return res.status(500).json({ error: `Could not create user '. ${dbResult?.result}` })
@@ -154,7 +158,7 @@ app.get(`${baseApiUrl}/users/sendRecoveryEmail/:email`, async (req, res) => {
 app.post(`${baseApiUrl}/users/resetPassword`, async (req, res) => {
   console.log(resetPasswordDict)
   const email = resetPasswordDict[req.body.uuid]
-  if(!email) {
+  if (!email) {
     return res.status(401).json({ error: "No email recovery sent for this account." })
   }
   const users = await collections.users?.find().toArray()!
@@ -165,7 +169,7 @@ app.post(`${baseApiUrl}/users/resetPassword`, async (req, res) => {
   try {
     const salt = await bcrypt.genSalt()
     const hashedPassword = await bcrypt.hash(req.body.password, salt)
-    const dbResult = await collections.users?.updateOne({email}, {$set: { password: hashedPassword}})
+    const dbResult = await collections.users?.updateOne({ email }, { $set: { password: hashedPassword } })
 
     if (dbResult?.result.ok) {
       (req.session as any).isAuth = true;
@@ -370,7 +374,18 @@ app.post(`${baseApiUrl}/room/draftPicks/:id`, (req, res: Response<RoomResult>) =
 
 // - cardSets
 app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
+  const userSession = req.session as ExtendedSession
   const b = req.body
+
+  const cardSet = await collections.cardSets?.findOne({ id: b.id })
+
+  if (!userSession.isAuth || !userSession.email) {
+    return res.status(401).json({ error: "User is not logged in" })
+  } else if (cardSet && cardSet.author !== userSession.email) {
+    return res.status(401).json({ error: "Cannot edit a card set belonging to a different user" })
+  }
+
+  
   const customSet: CardSet = {
     custom_set: b.custom_set,
     id: b.id,
@@ -378,19 +393,38 @@ app.post(`${baseApiUrl}/cardSet`, async (req, res) => {
     set_code: b.set_code,
     set_name: b.set_name,
     tcg_date: b.tcg_date,
+    author: userSession.email,
     card_ids: b.card_ids
   }
   const dbResult = await collections.cardSets?.insertOne(customSet)
 
-  console.dir(dbResult?.result)
   if (dbResult?.result.ok)
     res.json(customSet)
   else
     res.json({ error: `Could not insert card set '${req.body.set_name}'. ${dbResult?.result}` })
 })
 
+app.delete(`${baseApiUrl}/cardSet/:ids`, async (req, res) => {
+  const userSession = req.session as ExtendedSession
+  const idsToDelete = req.params.ids.split(',')
+
+  const cardSets = await collections.cardSets?.find({ id: { $in: idsToDelete } }).toArray()
+
+  if (!userSession.isAuth || !userSession.email) {
+    return res.status(401).json({ error: "User is not logged in" })
+  } else if (cardSets?.some((cardSet) => cardSet.author !== userSession.email)) {
+    return res.status(401).json({ error: "A card set to be deleted is not owned by the logged in user" })
+  }
+
+  const dbResult = await collections.cardSets?.deleteMany({ id: { $in: idsToDelete } })
+
+  if (dbResult?.result.ok)
+    res.json({ message: `Successfully deleted ${dbResult.deletedCount}` })
+  else
+    res.json({ error: `Could not delete card set(s) '${req.params.ids}'. ${dbResult?.result}` })
+})
+
 app.get(`${baseApiUrl}/cardSet`, async (req, res) => {
-  const b = req.body
   const setsFromDb = await collections.cardSets?.find().toArray()
   return res.json(setsFromDb)
 })
